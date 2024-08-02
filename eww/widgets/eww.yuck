@@ -1,0 +1,138 @@
+
+(defwidget canva []
+  (box :orientation "v"
+       :class "canva"
+       :space-evenly true
+       :spacing 15
+       ; :hexpand false
+       :halign "start"
+    (top)
+    (widgetCenter)
+    (bottom)
+
+  )
+)
+
+(defwidget top []
+  (box :orientation "h"
+    :class "section"
+    :space-evenly true
+    :spacing 15
+    (profile)
+    (musicWidget)
+  )
+)
+
+(defpoll currentUser :interval "3600s" "whoami")
+(defwidget profile []
+  (box :orientation "v"
+    :class "profile  buttonStyleWidget"
+    :space-evenly false 
+    ;:spacing 5
+    (box
+      :class "profileIcon"
+      (image 
+        :class "image"
+        :path "./assets/profile.png"
+        :image-width 120
+        :image-height 120
+      )
+    )
+    (label :text " ${currentUser}" :class "user")
+  )
+)
+
+(defpoll song :interval "2s"  "./scripts/music_info --song | cut -c 1-30")
+(defpoll song_artist :interval "2s"  "./scripts/music_info --artist")
+(deflisten song_status "playerctl status --follow")
+(defpoll cover_art :interval "2s"  "./scripts/music_info --cover")
+(defwidget musicWidget [] 
+  (box :class "musicSection buttonStyleWidget" :orientation "v" :space-evenly false  
+    (image :class "song_cover_art" :path cover_art :image-width 100 :image-height 100)
+      (box :vexpand "false" :hexpand "false" :oreintation "h"  :space-evenly true
+        (button :class "song_btn_prev" :onclick "./scripts/music_info --prev" "󰒮")
+        (button :class "song_btn_play" :onclick "./scripts/music_info --toggle" "${song_status == "Playing" ? "" : ""}")
+        (button :class "song_btn_next" :onclick "./scripts/music_info --next" "󰒭")
+      )
+     (label :class "songName" :text song)
+     (label :class "songArtist" :text song_artist)
+  )
+)
+
+(defwidget widgetCenter []
+  (box :orientation "h"
+    :class "section buttonStyleWidget"
+    :space-evenly false
+    :valign "start"
+    ; :spacing 5
+    (launcher :icon "󰃵" :onclick "xdg-open https://calendar.google.com/" :classes "launcher")
+    (todoWidget)
+  )
+)
+
+(defpoll tasks :interval "10s"  "bash /home/estebandev/Dev/bin/Calendar/todo.sh")
+(defwidget todoWidget []
+  (box :orientation "v"
+    :class "todosContainer"
+    :space-evenly true
+    (label :class "titleTodos" :text "TODO's" )
+    (literal :content tasks)
+  )
+)
+
+(defwidget bottom []
+  (box :orientation "h"
+       :space-evenly false
+       :spacing 15
+       :hexpand false
+       :halign "start"
+    (launchers)
+    (powerHandlers)
+  )
+)
+
+(defwidget launchers []
+  (box :orientation "h"
+    :space-evenly true
+    :class "buttonStyleWidget launcherSection"
+    ; :space-evenly true
+    (launcher :icon "󰀻" :onclick "wofi --show drun" :classes "launcher apps")
+    (launcher :icon "󰊫" :onclick "xdg-open https://mail.google.com/mail/u/0/?hl=es#inbox" :classes "launcher gmail")
+    (launcher :icon "" :onclick "xdg-open https://github.com/Esteban528/" :classes "launcher github")
+    (launcher :icon "" :onclick "vesktop" :classes "launcher launcherProgram")
+  )
+)
+
+(defwidget powerHandlers []
+  (box :orientation "v"
+    :class "buttonStyleWidget"
+    ; :space-evenly true
+    (launcher :icon "⏻" :onclick "poweroff" :classes  "powertray poweroff")
+    (launcher :icon "" :onclick "reboot" :classes  "powertray reboot")
+    (launcher :icon "󰒲" :onclick "systemctl suspend" :classes  "powertray sleep")
+
+  )
+)
+
+(defwidget launcher [icon onclick classes]
+    (button 
+      :class "${classes}"
+      :onclick "./scripts/launch ${onclick}"
+      icon
+      )
+  )
+
+(defwindow widget
+  :monitor 0
+  :geometry (geometry :x "0%"
+    :y "0%"
+    :width "40%"
+    :height "70%"
+  :anchor "left top")
+  :stacking "fg"
+  :exclusive false
+  :focusable false
+  (canva)
+  )
+
+

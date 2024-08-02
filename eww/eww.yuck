@@ -1,0 +1,238 @@
+
+(defwidget bar []
+  (box :class "bar"
+    (centerbox :orientation "h"
+      (left)
+      (center)
+      (rigth)
+    )
+  )
+)
+
+;----LeftSide
+(defwidget left []
+  (box :orientation "h" :halign "start" :space-evenly "false" :spacing 8
+    (startMenu)
+    (workspaces)
+    (music)
+  )
+)
+
+(defvar startMenuStatus "false")
+(defvar isMenuOpen "false")
+(defwidget startMenu []
+  (box :orientation "h" :halign "start" :space-evenly "false"
+    (eventbox
+        ; :cursor "pointer"
+        :class "buttonStyle"
+        :onhover "eww update startMenuStatus=true"
+        :onhoverlost "eww update startMenuStatus=false"
+      (box
+        :class "startMenu"
+        :orientation "h"
+        :space-evenly false
+        (image 
+          :class "image"
+          :path "./assets/nixos-icon.png"
+          :image-width 20
+          :image-height 20
+        )
+        (revealer
+            :transition "slideright" 
+            :reveal startMenuStatus
+            :duration "550ms"
+          (button 
+            :onclick "bash ./scripts/widget.sh"
+            "Menu"
+          )
+        )
+      )
+    )
+  )
+ )
+
+(deflisten workspaces :initial "[]" "bash ~/.config/eww/scripts/get-workspaces")
+(deflisten current_workspace :initial "1" "bash ~/.config/eww/scripts/get-active-workspace")
+(defwidget workspaces []
+  (eventbox :onscroll "bash ~/.config/eww/scripts/change-active-workspace {} ${current_workspace}" 
+    (box :space-evenly true :class "workspaces-widget"
+      (label :text "${workspaces}${current_workspace}" :visible false)
+      (for workspace in workspaces
+        (eventbox :onclick "hyprctl dispatch workspace ${workspace.id}" 
+          (box 
+            :class "workspace-entry"
+            (label 
+              :class "${workspace.id == current_workspace ? "current" : ""} ${workspace.windows > 0 ? "occupied" : "empty"}"
+              :text "${workspace.id == current_workspace ? "󱓻" : ""}")
+            )
+          )
+        )
+      )
+    )
+  )
+
+(defpoll currentMusic :interval "10s" "echo $(playerctl metadata title) | cut -c 1-50")
+(defvar currentMusicStatus "false")
+(defwidget music []
+  (eventbox
+      ; :cursor "pointer"
+      :onhover "eww update currentMusicStatus=true"
+      :onhoverlost "eww update currentMusicStatus=false"
+    (box
+      :class "music buttonStyle"
+      :orientation "h"
+      :space-evenly false
+      (label 
+        :class "musicLabel"
+        :text "${currentMusic != "" ? "󰝚" : "󰝛"}" )
+
+      (revealer
+          :transition "slideright" 
+          :reveal currentMusicStatus
+          :duration "1550ms"
+
+        (button 
+            "${currentMusic != "" ? currentMusic : "Not playing"}"
+        )
+      )
+    )
+  )
+)
+
+;Center
+(defwidget center []
+  (box :orientation "h" :halign "center" 
+    (clock)
+  )
+)
+
+(defpoll date :interval "3600s" "scripts/date-time.sh date")
+(defpoll time :interval "5s" "date +%H:%M")
+(defwidget clock []
+  (box :class "clock"
+    :orientation "h"
+    :space-evenly false
+    :halign "start"
+    :spacing 6
+    (button
+      :class "clockb"
+      :onclick "scripts/calendar.sh show"
+    "  ${date}")
+
+    (button
+      :class "clockb"
+      :onclick "scripts/calendar.sh show"
+    "  ${time}")
+  ))
+
+;RigthSide
+(defwidget rigth []
+  (box 
+    ; :class "buttonStyle"
+    :orientation "h"
+    :halign "end" 
+    :space-evenly false
+    :spacing 10
+    (systemStats)
+    (stray)
+    (button :onclick "scripts/network.sh ShowInfo" network)
+    (volume)
+  )
+)
+
+(defpoll network :interval "5s"
+"scripts/network.sh")
+(defwidget systemStats []
+  (box :class "buttonsRight"
+    :orientation "h"
+    :space-evenly true
+    :halign "center"
+    :spacing 4
+    
+   (label :text "󰢮 ${EWW_TEMPS.AMDGPU_EDGE}°" :class "orange")
+   (label :text " ${round(EWW_TEMPS.K10TEMP_TCTL, 0)}°" :class "yellow")
+   (circularProgress :value {EWW_CPU.avg} :label "󰓅 " :onclick "")
+  )
+)
+
+(defwidget stray []
+  (systray :class "systray"
+    :space-evenly false
+    :halign "end"
+    :spacing 5
+    :icon-size 18
+  ))
+
+(defvar volumeSlideStatus "false")
+(defvar volume "0")
+(defwidget volume []
+  (eventbox
+    ; :cursor "pointer"
+    :onhover "eww update volumeSlideStatus=true"
+    :onhoverlost "eww update volumeSlideStatus=false"
+    (box :class "audio" 
+      :orientation "h"
+      :space-evenly false
+      :halign "end"
+      :spacing 10
+      (label
+        :text "${volume < 1 ? "  Muted" : "  ${volume}"}")
+      (revealer
+          :transition "slideleft" 
+          :reveal volumeSlideStatus
+          :duration "550ms"
+        (metric :label ""
+          :value volume
+          :onchange "~/.config/scripts/volumecontrol set {}")
+      )
+    )
+  )
+)
+
+(defwidget metric [label value onchange]
+  (box :orientation "h"
+       :class "metric"
+       :space-evenly false
+       :spacing 5
+    (label :class "label"  :text label)
+    (scale :min 0
+           :max 101
+           :active {onchange != ""}
+           :value value
+           :onchange onchange
+    )
+  )
+)
+
+(defwidget circularProgress [value label onclick]
+  (box :class "circular no-style" :vexpand "false" :hexpand "false" :space-evenly true 
+    (circular-progress 
+      :value value 
+      :start-at 75
+      :thickness 4
+      :class "barCircular"
+    )
+
+    (button 
+      :class "iconCircular no-style"
+      :onclick {onclick != ""}
+      label
+    )
+  )
+)
+
+(defwindow bar
+  :monitor 0
+  :windowtype "dock"
+  :geometry (geometry :x "0%"
+    :y "0%"
+    :width "100%"
+    :height "20px"
+  :anchor "top center")
+  :stacking "bg"
+  :exclusive true
+  :focusable false
+  (bar)
+  )
+
+(include "./widgets/eww.yuck")

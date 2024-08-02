@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+## Definir variables
+COVER="/tmp/.music_cover.png"
+MUSIC_DIR="$HOME/Music"
+
+## Obtener estado
+get_status() {
+  status=$(playerctl status 2>/dev/null)
+  if [[ "$status" == "Playing" ]]; then
+    echo ""
+  else
+    echo ""
+  fi
+}
+
+## Obtener canción
+get_song() {
+  song=$(playerctl metadata title 2>/dev/null)
+  if [[ -z "$song" ]]; then
+    echo "Offline"
+  else
+    echo "$song"
+  fi
+}
+
+## Obtener artista
+get_artist() {
+  artist=$(playerctl metadata artist 2>/dev/null)
+  if [[ -z "$artist" ]]; then
+    echo ""
+  else
+    echo "$artist"
+  fi
+}
+
+## Obtener tiempo de reproducción actual
+get_time() {
+  position_micro=$(playerctl metadata mpris:length 2>/dev/null)
+  if [[ -n "$position_micro" ]]; then
+    position_seconds=$((position_micro / 1000000))
+    printf "%s" "$position_seconds"
+  else
+    echo "0:00"
+  fi
+}
+
+## Obtener tiempo transcurrido
+get_ctime() {
+  position_micro=$(playerctl metadata mpris:position 2>/dev/null)
+  echo position_micro
+}
+
+## Obtener tiempo total de la canción
+get_ttime() {
+  ttime=$(playerctl metadata --format '{{mpris:trackid}}' 2>/dev/null)
+  if [[ -z "$ttime" ]]; then
+    echo "0:00"
+  else
+    ttime_seconds=$((ttime / 1000000))    # Convertir microsegundos a segundos
+    ttime_minutes=$((ttime_seconds / 60)) # Convertir segundos a minutos
+    ttime_seconds=$((ttime_seconds % 60)) # Obtener segundos restantes
+    printf "%d:%02d" "$ttime_minutes" "$ttime_seconds"
+  fi
+}
+
+## Obtener carátula
+get_cover() {
+  # Obtener la URL de la carátula del álbum (si está disponible)
+  art_url=$(playerctl metadata --format '{{mpris:artUrl}}' 2>/dev/null)
+
+  if [[ -n "$art_url" ]]; then
+    # Descargar la carátula y guardarla en la ubicación especificada
+    wget -q "$art_url" -O "$COVER"
+    if [ $? -eq 0 ]; then
+      echo "$COVER"
+    else
+      echo "./assets/music.jpg" # Carátula por defecto
+    fi
+  else
+    echo "./assets/music.jpg" # Carátula por defecto
+  fi
+}
+
+## Ejecutar según el argumento
+case "$1" in
+"--song")
+  get_song
+  ;;
+"--artist")
+  get_artist
+  ;;
+"--status")
+  get_status
+  ;;
+"--time")
+  get_time
+  ;;
+"--ctime")
+  get_ctime
+  ;;
+"--ttime")
+  get_ttime
+  ;;
+"--cover")
+  get_cover
+  ;;
+"--toggle")
+  playerctl play-pause
+  ;;
+"--next")
+  {
+    playerctl next
+    sleep 0.1 # Dar tiempo para que cambie la canción antes de obtener la nueva carátula
+    get_cover
+  }
+  ;;
+"--prev")
+  {
+    playerctl previous
+    sleep 0.1 # Dar tiempo para que cambie la canción antes de obtener la nueva carátula
+    get_cover
+  }
+  ;;
+*)
+  echo "Uso: $0 [--song|--artist|--status|--time|--ctime|--ttime|--cover|--toggle|--next|--prev]"
+  exit 1
+  ;;
+esac
